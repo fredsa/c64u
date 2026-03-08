@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -87,6 +88,8 @@ func main() {
 		err = cmdDriveMode(client, rest)
 	case "drivereset":
 		err = cmdDriveReset(client, rest)
+	case "loadrom":
+		err = cmdLoadROM(client, rest)
 
 	// Streams
 	case "stream-start":
@@ -135,7 +138,7 @@ Commands:
     pause                           Pause the CPU
     resume                          Resume the CPU
     poweroff                        Power off (U64 only)
-    writemem <addr> <hexdata>       Write hex data to memory
+    writemem <addr> <hexdata|file>  Write hex data or file to memory
     readmem <addr> [length]         Read memory (default 256 bytes)
     debugreg [value]                Read/write debug register (U64)
 
@@ -149,12 +152,13 @@ Commands:
 
   Drives:
     drives                          List drive info
-    mount <drive> <image> [mode]    Mount a disk image (mode: readwrite|readonly|unlinked)
+    mount <drive> <image> [mode]    Mount a disk image (d64|g64|d71|g71|d81; mode: readwrite|readonly|unlinked)
     unmount <drive>                 Remove disk from drive
     driveon <drive>                 Turn drive on
     driveoff <drive>                Turn drive off
     drivemode <drive> <mode>        Set drive mode (1541|1571|1581)
     drivereset <drive>              Reset drive
+    loadrom <drive> <file>          Load a drive ROM (16K or 32K)
 
   Streams (U64 only):
     stream-start <name> <ip[:port]> Start a stream (video|audio|debug)
@@ -304,8 +308,19 @@ func cmdRunCRT(client *c64u.Client, args []string) error {
 }
 
 func cmdWriteMem(client *c64u.Client, args []string) error {
-	requireArgs(args, 2, "c64u <host> writemem <addr> <hexdata>")
-	resp, err := client.WriteMem(args[0], args[1])
+	requireArgs(args, 2, "c64u <host> writemem <addr> <hexdata | file>")
+	addr := args[0]
+	var resp *c64u.ErrorResponse
+	var err error
+	if _, statErr := os.Stat(args[1]); statErr == nil {
+		data, readErr := os.ReadFile(args[1])
+		if readErr != nil {
+			return readErr
+		}
+		resp, err = client.WriteMemData(addr, data)
+	} else {
+		resp, err = client.WriteMem(addr, args[1])
+	}
 	if err != nil {
 		return err
 	}
@@ -412,7 +427,19 @@ func cmdMount(client *c64u.Client, args []string) error {
 	if len(args) > 2 {
 		mode = c64u.MountMode(args[2])
 	}
-	resp, err := client.MountImage(args[0], args[1], "", mode)
+	drive := args[0]
+	image := args[1]
+	var resp *c64u.ErrorResponse
+	var err error
+	if _, statErr := os.Stat(image); statErr == nil {
+		data, readErr := os.ReadFile(image)
+		if readErr != nil {
+			return readErr
+		}
+		resp, err = client.MountImageData(drive, data, filepath.Base(image), "", mode)
+	} else {
+		resp, err = client.MountImage(drive, image, "", mode)
+	}
 	if err != nil {
 		return err
 	}
@@ -459,6 +486,28 @@ func cmdDriveMode(client *c64u.Client, args []string) error {
 func cmdDriveReset(client *c64u.Client, args []string) error {
 	requireArgs(args, 1, "c64u <host> drivereset <drive>")
 	resp, err := client.ResetDrive(args[0])
+	if err != nil {
+		return err
+	}
+	printErrors(resp)
+	return nil
+}
+
+func cmdLoadROM(client *c64u.Client, args []string) error {
+	requireArgs(args, 2, "c64u <host> loadrom <drive> <file>")
+	drive := args[0]
+	file := args[1]
+	var resp *c64u.ErrorResponse
+	var err error
+	if _, statErr := os.Stat(file); statErr == nil {
+		data, readErr := os.ReadFile(file)
+		if readErr != nil {
+			return readErr
+		}
+		resp, err = client.LoadDriveROMData(drive, data)
+	} else {
+		resp, err = client.LoadDriveROM(drive, file)
+	}
 	if err != nil {
 		return err
 	}
