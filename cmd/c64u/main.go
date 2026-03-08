@@ -187,6 +187,19 @@ func requireArgs(args []string, min int, usage string) {
 	}
 }
 
+// putOrPost checks if the path is a local file. If so, it reads and POSTs it.
+// Otherwise it treats it as a remote path on the Ultimate and PUTs it.
+func putOrPost(path string, putFn func(string) (*c64u.ErrorResponse, error), postFn func([]byte) (*c64u.ErrorResponse, error)) (*c64u.ErrorResponse, error) {
+	if _, err := os.Stat(path); err == nil {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return nil, err
+		}
+		return postFn(data)
+	}
+	return putFn(path)
+}
+
 func printJSON(v any) {
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
@@ -229,9 +242,22 @@ func cmdSIDPlay(client *c64u.Client, args []string) error {
 		}
 		songNr = n
 	}
-	resp, err := client.SIDPlay(args[0], songNr)
-	if err != nil {
-		return err
+	var resp *c64u.ErrorResponse
+	if _, statErr := os.Stat(args[0]); statErr == nil {
+		data, err := os.ReadFile(args[0])
+		if err != nil {
+			return err
+		}
+		resp, err = client.SIDPlayData(data, songNr, nil)
+		if err != nil {
+			return err
+		}
+	} else {
+		var err error
+		resp, err = client.SIDPlay(args[0], songNr)
+		if err != nil {
+			return err
+		}
 	}
 	printErrors(resp)
 	return nil
@@ -239,7 +265,7 @@ func cmdSIDPlay(client *c64u.Client, args []string) error {
 
 func cmdMODPlay(client *c64u.Client, args []string) error {
 	requireArgs(args, 1, "c64u <host> modplay <file>")
-	resp, err := client.MODPlay(args[0])
+	resp, err := putOrPost(args[0], client.MODPlay, client.MODPlayData)
 	if err != nil {
 		return err
 	}
@@ -249,7 +275,7 @@ func cmdMODPlay(client *c64u.Client, args []string) error {
 
 func cmdLoadPRG(client *c64u.Client, args []string) error {
 	requireArgs(args, 1, "c64u <host> load <file>")
-	resp, err := client.LoadPRG(args[0])
+	resp, err := putOrPost(args[0], client.LoadPRG, client.LoadPRGData)
 	if err != nil {
 		return err
 	}
@@ -259,7 +285,7 @@ func cmdLoadPRG(client *c64u.Client, args []string) error {
 
 func cmdRunPRG(client *c64u.Client, args []string) error {
 	requireArgs(args, 1, "c64u <host> run <file>")
-	resp, err := client.RunPRG(args[0])
+	resp, err := putOrPost(args[0], client.RunPRG, client.RunPRGData)
 	if err != nil {
 		return err
 	}
@@ -269,7 +295,7 @@ func cmdRunPRG(client *c64u.Client, args []string) error {
 
 func cmdRunCRT(client *c64u.Client, args []string) error {
 	requireArgs(args, 1, "c64u <host> crt <file>")
-	resp, err := client.RunCRT(args[0])
+	resp, err := putOrPost(args[0], client.RunCRT, client.RunCRTData)
 	if err != nil {
 		return err
 	}
