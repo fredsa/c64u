@@ -13,6 +13,13 @@ import (
 
 func main() {
 	args := os.Args[1:]
+
+	debug := false
+	if len(args) > 0 && (args[0] == "--debug" || args[0] == "-d") {
+		debug = true
+		args = args[1:]
+	}
+
 	if len(args) < 2 {
 		usage()
 	}
@@ -22,6 +29,7 @@ func main() {
 	rest := args[2:]
 
 	client := c64u.NewClient(host)
+	client.Debug = debug
 
 	var err error
 	switch cmd {
@@ -119,7 +127,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, `Usage: c64u <host> <command> [args...]
+	fmt.Fprintf(os.Stderr, `Usage: c64u [-d] <host> <command> [args...]
 
 Commands:
   About:

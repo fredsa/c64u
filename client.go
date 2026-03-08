@@ -11,7 +11,9 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
+	"os"
 )
 
 // Client communicates with the Ultimate 1541-II+ REST API.
@@ -19,6 +21,8 @@ type Client struct {
 	// BaseURL is the base URL of the Ultimate device, e.g. "http://192.168.1.100".
 	BaseURL    string
 	HTTPClient *http.Client
+	// Debug enables logging of HTTP requests and responses to stderr.
+	Debug bool
 }
 
 // NewClient creates a new API client for the Ultimate device at the given address.
@@ -52,18 +56,29 @@ func (c *Client) doJSON(method, path string, params url.Values, body io.Reader, 
 	if contentType != "" {
 		req.Header.Set("Content-Type", contentType)
 	}
+	if c.Debug {
+		dump, _ := httputil.DumpRequestOut(req, false)
+		fmt.Fprintf(os.Stderr, "< %s", dump)
+	}
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("executing request: %w", err)
 	}
 	defer resp.Body.Close()
 
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("reading response: %w", err)
+	}
+	if c.Debug {
+		dump, _ := httputil.DumpResponse(resp, false)
+		fmt.Fprintf(os.Stderr, "> %s> %s\n", dump, respBody)
+	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		respBody, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(respBody))
 	}
 	if result != nil {
-		if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
+		if err := json.Unmarshal(respBody, result); err != nil {
 			return fmt.Errorf("decoding response: %w", err)
 		}
 	}
@@ -108,17 +123,28 @@ func (c *Client) getRaw(path string, params url.Values) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("creating request: %w", err)
 	}
+	if c.Debug {
+		dump, _ := httputil.DumpRequestOut(req, false)
+		fmt.Fprintf(os.Stderr, "< %s", dump)
+	}
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("executing request: %w", err)
 	}
 	defer resp.Body.Close()
 
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("reading response: %w", err)
+	}
+	if c.Debug {
+		dump, _ := httputil.DumpResponse(resp, false)
+		fmt.Fprintf(os.Stderr, "> %s> (%d bytes)\n", dump, len(respBody))
+	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		respBody, _ := io.ReadAll(resp.Body)
 		return nil, fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(respBody))
 	}
-	return io.ReadAll(resp.Body)
+	return respBody, nil
 }
 
 func (c *Client) postBinary(path string, params url.Values, data []byte, result any) error {
