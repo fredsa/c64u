@@ -127,7 +127,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, `Usage: c64u [-d] <host> <command> [args...]
+	fmt.Fprintf(os.Stderr, `Usage: c64u [-d|--debug] <host> <command> [args...]
 
 Commands:
   About:
@@ -151,16 +151,17 @@ Commands:
     debugreg [value]                Read/write debug register (U64)
 
   Configuration:
-    categories                      List config categories
-    config [category [item]]        Get config values
+    categories                           List config categories
+    config [category [item]]             Get config values
     setconfig <category> <item> <value>  Set a config value
-    saveconfig                      Save config to flash
-    loadconfig                      Load config from flash
-    resetconfig                     Reset config to defaults
+    saveconfig                           Save config to flash
+    loadconfig                           Load config from flash
+    resetconfig                          Reset config to defaults
 
   Drives:
     drives                          List drive info
-    mount <drive> <image> [mode]    Mount a disk image (d64|g64|d71|g71|d81; mode: readwrite|readonly|unlinked)
+    mount <drive> <image> [mode]    Mount a disk image (d64, g64, d71, g71, d81)
+	                                mode: readwrite|readonly|unlinked
     unmount <drive>                 Remove disk from drive
     driveon <drive>                 Turn drive on
     driveoff <drive>                Turn drive off
@@ -173,10 +174,10 @@ Commands:
     stream-stop <name>              Stop a stream
 
   Files:
-    fileinfo <path>                 Get file info
+    fileinfo <path>                        Get file info
     create-d64 <path> [tracks] [diskname]  Create a .d64 image
-    create-d71 <path> [diskname]    Create a .d71 image
-    create-d81 <path> [diskname]    Create a .d81 image
+    create-d71 <path> [diskname]           Create a .d71 image
+    create-d81 <path> [diskname]           Create a .d81 image
     create-dnp <path> <tracks> [diskname]  Create a .dnp image
 
 Examples:
