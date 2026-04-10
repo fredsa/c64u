@@ -2,7 +2,7 @@
 //
 // The API is available starting from Ultimate firmware 3.11.
 // See https://1541u-documentation.readthedocs.io/en/latest/api/api_calls.html
-package c64u
+package main
 
 import (
 	"bytes"

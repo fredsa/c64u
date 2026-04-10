@@ -7,8 +7,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-
-	"github.com/fredsa/c64u"
 )
 
 func main() {
@@ -28,7 +26,7 @@ func main() {
 	cmd := args[1]
 	rest := args[2:]
 
-	client := c64u.NewClient(host)
+	client := NewClient(host)
 	client.Debug = debug
 
 	var err error
@@ -202,7 +200,7 @@ func requireArgs(args []string, min int, usage string) {
 
 // putOrPost checks if the path is a local file. If so, it reads and POSTs it.
 // Otherwise it treats it as a remote path on the Ultimate and PUTs it.
-func putOrPost(path string, putFn func(string) (*c64u.ErrorResponse, error), postFn func([]byte) (*c64u.ErrorResponse, error)) (*c64u.ErrorResponse, error) {
+func putOrPost(path string, putFn func(string) (*ErrorResponse, error), postFn func([]byte) (*ErrorResponse, error)) (*ErrorResponse, error) {
 	if _, err := os.Stat(path); err == nil {
 		data, err := os.ReadFile(path)
 		if err != nil {
@@ -219,7 +217,7 @@ func printJSON(v any) {
 	enc.Encode(v)
 }
 
-func printErrors(resp *c64u.ErrorResponse) {
+func printErrors(resp *ErrorResponse) {
 	if resp != nil && len(resp.Errors) > 0 {
 		for _, e := range resp.Errors {
 			fmt.Fprintf(os.Stderr, "Error: %s\n", e)
@@ -227,7 +225,7 @@ func printErrors(resp *c64u.ErrorResponse) {
 	}
 }
 
-func cmdSimple(_ *c64u.Client, fn func() (*c64u.ErrorResponse, error)) error {
+func cmdSimple(_ *Client, fn func() (*ErrorResponse, error)) error {
 	resp, err := fn()
 	if err != nil {
 		return err
@@ -236,7 +234,7 @@ func cmdSimple(_ *c64u.Client, fn func() (*c64u.ErrorResponse, error)) error {
 	return nil
 }
 
-func cmdVersion(client *c64u.Client) error {
+func cmdVersion(client *Client) error {
 	resp, err := client.Version()
 	if err != nil {
 		return err
@@ -245,7 +243,7 @@ func cmdVersion(client *c64u.Client) error {
 	return nil
 }
 
-func cmdSIDPlay(client *c64u.Client, args []string) error {
+func cmdSIDPlay(client *Client, args []string) error {
 	requireArgs(args, 1, "c64u <host> sidplay <file> [songnr]")
 	songNr := 0
 	if len(args) > 1 {
@@ -255,7 +253,7 @@ func cmdSIDPlay(client *c64u.Client, args []string) error {
 		}
 		songNr = n
 	}
-	var resp *c64u.ErrorResponse
+	var resp *ErrorResponse
 	if _, statErr := os.Stat(args[0]); statErr == nil {
 		data, err := os.ReadFile(args[0])
 		if err != nil {
@@ -276,7 +274,7 @@ func cmdSIDPlay(client *c64u.Client, args []string) error {
 	return nil
 }
 
-func cmdMODPlay(client *c64u.Client, args []string) error {
+func cmdMODPlay(client *Client, args []string) error {
 	requireArgs(args, 1, "c64u <host> modplay <file>")
 	resp, err := putOrPost(args[0], client.MODPlay, client.MODPlayData)
 	if err != nil {
@@ -286,7 +284,7 @@ func cmdMODPlay(client *c64u.Client, args []string) error {
 	return nil
 }
 
-func cmdLoadPRG(client *c64u.Client, args []string) error {
+func cmdLoadPRG(client *Client, args []string) error {
 	requireArgs(args, 1, "c64u <host> load <file>")
 	resp, err := putOrPost(args[0], client.LoadPRG, client.LoadPRGData)
 	if err != nil {
@@ -296,7 +294,7 @@ func cmdLoadPRG(client *c64u.Client, args []string) error {
 	return nil
 }
 
-func cmdRunPRG(client *c64u.Client, args []string) error {
+func cmdRunPRG(client *Client, args []string) error {
 	requireArgs(args, 1, "c64u <host> run <file>")
 	resp, err := putOrPost(args[0], client.RunPRG, client.RunPRGData)
 	if err != nil {
@@ -306,7 +304,7 @@ func cmdRunPRG(client *c64u.Client, args []string) error {
 	return nil
 }
 
-func cmdRunCRT(client *c64u.Client, args []string) error {
+func cmdRunCRT(client *Client, args []string) error {
 	requireArgs(args, 1, "c64u <host> crt <file>")
 	resp, err := putOrPost(args[0], client.RunCRT, client.RunCRTData)
 	if err != nil {
@@ -316,10 +314,10 @@ func cmdRunCRT(client *c64u.Client, args []string) error {
 	return nil
 }
 
-func cmdWriteMem(client *c64u.Client, args []string) error {
+func cmdWriteMem(client *Client, args []string) error {
 	requireArgs(args, 2, "c64u <host> writemem <addr> <hexdata | file>")
 	addr := args[0]
-	var resp *c64u.ErrorResponse
+	var resp *ErrorResponse
 	var err error
 	if _, statErr := os.Stat(args[1]); statErr == nil {
 		data, readErr := os.ReadFile(args[1])
@@ -337,7 +335,7 @@ func cmdWriteMem(client *c64u.Client, args []string) error {
 	return nil
 }
 
-func cmdReadMem(client *c64u.Client, args []string) error {
+func cmdReadMem(client *Client, args []string) error {
 	requireArgs(args, 1, "c64u <host> readmem <addr> [length]")
 	length := 0
 	if len(args) > 1 {
@@ -362,7 +360,7 @@ func cmdReadMem(client *c64u.Client, args []string) error {
 	return nil
 }
 
-func cmdDebugReg(client *c64u.Client, args []string) error {
+func cmdDebugReg(client *Client, args []string) error {
 	if len(args) > 0 {
 		resp, err := client.WriteDebugReg(args[0])
 		if err != nil {
@@ -379,7 +377,7 @@ func cmdDebugReg(client *c64u.Client, args []string) error {
 	return nil
 }
 
-func cmdCategories(client *c64u.Client) error {
+func cmdCategories(client *Client) error {
 	resp, err := client.ListCategories()
 	if err != nil {
 		return err
@@ -388,7 +386,7 @@ func cmdCategories(client *c64u.Client) error {
 	return nil
 }
 
-func cmdConfig(client *c64u.Client, args []string) error {
+func cmdConfig(client *Client, args []string) error {
 	if len(args) == 0 {
 		resp, err := client.ListCategories()
 		if err != nil {
@@ -411,7 +409,7 @@ func cmdConfig(client *c64u.Client, args []string) error {
 	return nil
 }
 
-func cmdSetConfig(client *c64u.Client, args []string) error {
+func cmdSetConfig(client *Client, args []string) error {
 	requireArgs(args, 3, "c64u <host> setconfig <category> <item> <value>")
 	resp, err := client.SetConfigItem(args[0], args[1], strings.Join(args[2:], " "))
 	if err != nil {
@@ -421,7 +419,7 @@ func cmdSetConfig(client *c64u.Client, args []string) error {
 	return nil
 }
 
-func cmdDrives(client *c64u.Client) error {
+func cmdDrives(client *Client) error {
 	resp, err := client.ListDrives()
 	if err != nil {
 		return err
@@ -430,15 +428,15 @@ func cmdDrives(client *c64u.Client) error {
 	return nil
 }
 
-func cmdMount(client *c64u.Client, args []string) error {
+func cmdMount(client *Client, args []string) error {
 	requireArgs(args, 2, "c64u <host> mount <drive> <image> [mode]")
-	var mode c64u.MountMode
+	var mode MountMode
 	if len(args) > 2 {
-		mode = c64u.MountMode(args[2])
+		mode = MountMode(args[2])
 	}
 	drive := args[0]
 	image := args[1]
-	var resp *c64u.ErrorResponse
+	var resp *ErrorResponse
 	var err error
 	if _, statErr := os.Stat(image); statErr == nil {
 		data, readErr := os.ReadFile(image)
@@ -456,7 +454,7 @@ func cmdMount(client *c64u.Client, args []string) error {
 	return nil
 }
 
-func cmdUnmount(client *c64u.Client, args []string) error {
+func cmdUnmount(client *Client, args []string) error {
 	requireArgs(args, 1, "c64u <host> unmount <drive>")
 	resp, err := client.RemoveDisk(args[0])
 	if err != nil {
@@ -466,9 +464,9 @@ func cmdUnmount(client *c64u.Client, args []string) error {
 	return nil
 }
 
-func cmdDriveOnOff(client *c64u.Client, args []string, on bool) error {
+func cmdDriveOnOff(client *Client, args []string, on bool) error {
 	requireArgs(args, 1, "c64u <host> driveon|driveoff <drive>")
-	var resp *c64u.ErrorResponse
+	var resp *ErrorResponse
 	var err error
 	if on {
 		resp, err = client.DriveOn(args[0])
@@ -482,9 +480,9 @@ func cmdDriveOnOff(client *c64u.Client, args []string, on bool) error {
 	return nil
 }
 
-func cmdDriveMode(client *c64u.Client, args []string) error {
+func cmdDriveMode(client *Client, args []string) error {
 	requireArgs(args, 2, "c64u <host> drivemode <drive> <mode>")
-	resp, err := client.SetDriveMode(args[0], c64u.DriveMode(args[1]))
+	resp, err := client.SetDriveMode(args[0], DriveMode(args[1]))
 	if err != nil {
 		return err
 	}
@@ -492,7 +490,7 @@ func cmdDriveMode(client *c64u.Client, args []string) error {
 	return nil
 }
 
-func cmdDriveReset(client *c64u.Client, args []string) error {
+func cmdDriveReset(client *Client, args []string) error {
 	requireArgs(args, 1, "c64u <host> drivereset <drive>")
 	resp, err := client.ResetDrive(args[0])
 	if err != nil {
@@ -502,11 +500,11 @@ func cmdDriveReset(client *c64u.Client, args []string) error {
 	return nil
 }
 
-func cmdLoadROM(client *c64u.Client, args []string) error {
+func cmdLoadROM(client *Client, args []string) error {
 	requireArgs(args, 2, "c64u <host> loadrom <drive> <file>")
 	drive := args[0]
 	file := args[1]
-	var resp *c64u.ErrorResponse
+	var resp *ErrorResponse
 	var err error
 	if _, statErr := os.Stat(file); statErr == nil {
 		data, readErr := os.ReadFile(file)
@@ -524,9 +522,9 @@ func cmdLoadROM(client *c64u.Client, args []string) error {
 	return nil
 }
 
-func cmdStreamStart(client *c64u.Client, args []string) error {
+func cmdStreamStart(client *Client, args []string) error {
 	requireArgs(args, 2, "c64u <host> stream-start <name> <ip[:port]>")
-	resp, err := client.StartStream(c64u.StreamName(args[0]), args[1])
+	resp, err := client.StartStream(StreamName(args[0]), args[1])
 	if err != nil {
 		return err
 	}
@@ -534,9 +532,9 @@ func cmdStreamStart(client *c64u.Client, args []string) error {
 	return nil
 }
 
-func cmdStreamStop(client *c64u.Client, args []string) error {
+func cmdStreamStop(client *Client, args []string) error {
 	requireArgs(args, 1, "c64u <host> stream-stop <name>")
-	resp, err := client.StopStream(c64u.StreamName(args[0]))
+	resp, err := client.StopStream(StreamName(args[0]))
 	if err != nil {
 		return err
 	}
@@ -544,7 +542,7 @@ func cmdStreamStop(client *c64u.Client, args []string) error {
 	return nil
 }
 
-func cmdFileInfo(client *c64u.Client, args []string) error {
+func cmdFileInfo(client *Client, args []string) error {
 	requireArgs(args, 1, "c64u <host> fileinfo <path>")
 	resp, err := client.FileInfo(args[0])
 	if err != nil {
@@ -554,7 +552,7 @@ func cmdFileInfo(client *c64u.Client, args []string) error {
 	return nil
 }
 
-func cmdCreateD64(client *c64u.Client, args []string) error {
+func cmdCreateD64(client *Client, args []string) error {
 	requireArgs(args, 1, "c64u <host> create-d64 <path> [tracks] [diskname]")
 	tracks := 0
 	diskName := ""
@@ -576,7 +574,7 @@ func cmdCreateD64(client *c64u.Client, args []string) error {
 	return nil
 }
 
-func cmdCreateD71(client *c64u.Client, args []string) error {
+func cmdCreateD71(client *Client, args []string) error {
 	requireArgs(args, 1, "c64u <host> create-d71 <path> [diskname]")
 	diskName := ""
 	if len(args) > 1 {
@@ -590,7 +588,7 @@ func cmdCreateD71(client *c64u.Client, args []string) error {
 	return nil
 }
 
-func cmdCreateD81(client *c64u.Client, args []string) error {
+func cmdCreateD81(client *Client, args []string) error {
 	requireArgs(args, 1, "c64u <host> create-d81 <path> [diskname]")
 	diskName := ""
 	if len(args) > 1 {
@@ -604,7 +602,7 @@ func cmdCreateD81(client *c64u.Client, args []string) error {
 	return nil
 }
 
-func cmdCreateDNP(client *c64u.Client, args []string) error {
+func cmdCreateDNP(client *Client, args []string) error {
 	requireArgs(args, 2, "c64u <host> create-dnp <path> <tracks> [diskname]")
 	tracks, err := strconv.Atoi(args[1])
 	if err != nil {
@@ -621,3 +619,4 @@ func cmdCreateDNP(client *c64u.Client, args []string) error {
 	printErrors(resp)
 	return nil
 }
+

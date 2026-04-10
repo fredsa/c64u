@@ -1,6 +1,6 @@
 # c64u
 
-Go client library and CLI for the [Ultimate 1541-II+](https://ultimate64.com/) REST API.
+Go CLI for the [Ultimate 1541-II+](https://ultimate64.com/) REST API.
 
 Requires Ultimate firmware 3.11 or later.
 
@@ -19,7 +19,7 @@ Enable the Web API on your Ultimate device:
 ## Install
 
 ```
-go install github.com/fredsa/c64u/cmd/c64u@latest
+go install github.com/fredsa/c64u@latest
 ```
 
 Or build from source:
@@ -27,7 +27,7 @@ Or build from source:
 ```
 git clone https://github.com/fredsa/c64u.git
 cd c64u
-go install ./cmd/c64u
+go install
 ```
 
 ## CLI Usage
@@ -107,38 +107,4 @@ c64u 192.168.1.100 create-d64 /Usb0/disks/new.d64 40 "MY DISK"
 c64u 192.168.1.100 create-d71 /Usb0/disks/new.d71
 c64u 192.168.1.100 create-d81 /Usb0/disks/new.d81
 c64u 192.168.1.100 create-dnp /Usb0/disks/new.dnp 100
-```
-
-## Library Usage
-
-```go
-package main
-
-import "github.com/fredsa/c64u"
-
-func main() {
-    client := c64u.NewClient("192.168.1.100")
-
-    // Get API version
-    ver, _ := client.Version()
-
-    // Run a program from the Ultimate's filesystem
-    client.RunPRG("/Usb0/games/commando.prg")
-
-    // Upload and run a local program
-    data, _ := os.ReadFile("game.prg")
-    client.RunPRGData(data)
-
-    // Write to C64 memory (border=green, background=purple)
-    client.WriteMem("D020", "0504")
-
-    // Read 256 bytes from screen memory
-    mem, _ := client.ReadMem("0400", 256)
-
-    // Mount a disk image
-    client.MountImage("a", "/Usb0/disks/game.d64", "", c64u.MountReadWrite)
-
-    // Start video stream (U64 only)
-    client.StartStream(c64u.StreamVideo, "192.168.1.50")
-}
 ```

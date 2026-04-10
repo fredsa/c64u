@@ -1,4 +1,4 @@
-package c64u
+package main
 
 // VersionResponse is returned by the Version endpoint.
 type VersionResponse struct {

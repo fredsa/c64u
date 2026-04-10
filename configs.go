@@ -1,4 +1,4 @@
-package c64u
+package main
 
 import (
 	"encoding/json"
